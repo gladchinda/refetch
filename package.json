@@ -1,0 +1,10 @@
+{
+  "name": "refetch",
+  "version": "1.0.0",
+  "description": "A wrapper around the native Fetch API with lots of awesomeness.",
+  "main": "index.js",
+  "repository": "https://github.com/gladchinda/refetch.git",
+  "author": "Glad Chinda <gladxeqs@gmail.com>",
+  "license": "MIT",
+  "private": false
+}
