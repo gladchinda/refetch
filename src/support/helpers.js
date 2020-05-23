@@ -1,7 +1,7 @@
 function constant(value) {
   return function _constantFn() {
     return value;
-  }
+  };
 }
 
 function isFunction(value) {
@@ -13,9 +13,11 @@ function isObject(value) {
 }
 
 function getNumber(value, defaultNumber) {
-  return Number.isInteger(value = +value)
+  return Number.isInteger((value = +value))
     ? value
-    : Number.isInteger(defaultNumber) ? defaultNumber : Infinity;
+    : Number.isInteger(defaultNumber)
+    ? defaultNumber
+    : Infinity;
 }
 
 function getBoundedNumber(value, min = 0, max = Infinity) {
@@ -31,28 +33,42 @@ function getBoundedNumber(value, min = 0, max = Infinity) {
 }
 
 function resolveCallback(callback, fallback) {
-  return (callback === null) ? undefined : (isFunction(callback) ? callback : fallback);
+  return callback === null
+    ? undefined
+    : isFunction(callback)
+    ? callback
+    : fallback;
 }
 
 function exposeAsProperties(object, properties) {
   const enumerable = arguments[2] !== false;
-  return Object.defineProperties(object, Object.fromEntries(
-    Object.entries(properties)
-      .map(([prop, value]) => [prop, { enumerable, value }])
-  ));
+  return Object.defineProperties(
+    object,
+    Object.fromEntries(
+      Object.entries(properties).map(([prop, value]) => [
+        prop,
+        { enumerable, value }
+      ])
+    )
+  );
 }
 
 function delay(ms, callback) {
   let timeout = 0;
 
-  const promise = new Promise(resolve => {
-    timeout = setTimeout(() => {
-      resolve(Promise.resolve().then(() => {
-        if (timeout && isFunction(callback)) {
-          return callback();
-        }
-      }))
-    }, (isNaN(ms = +ms) || ms < 0) ? 1000 : ms);
+  const promise = new Promise((resolve) => {
+    timeout = setTimeout(
+      () => {
+        resolve(
+          Promise.resolve().then(() => {
+            if (timeout && isFunction(callback)) {
+              return callback();
+            }
+          })
+        );
+      },
+      isNaN((ms = +ms)) || ms < 0 ? 1000 : ms
+    );
   });
 
   return exposeAsProperties(promise, {
@@ -72,4 +88,4 @@ export {
   isFunction,
   isObject,
   resolveCallback
-}
+};

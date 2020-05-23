@@ -9,10 +9,14 @@ function refetch(config) {
 
 // Expose Retry (function) properties as static properties on the refetch function
 // Expose timeout static property as the DEFAULT_TIMEOUT on the refetch function
-exposeAsProperties(refetch, {
-  ...Retry,
-  timeout: DEFAULT_TIMEOUT
-}, false);
+exposeAsProperties(
+  refetch,
+  {
+    ...Retry,
+    timeout: DEFAULT_TIMEOUT
+  },
+  false
+);
 
 // Expose refetch on the global object
 // exposeAsProperties(global, { refetch });

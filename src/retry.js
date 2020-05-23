@@ -16,7 +16,7 @@ const __withRetries__ = (fn, retries) => {
   return exposeAsProperties(fn, {
     retries: getNumber(retries, DEFAULT_MAX_RETRIES)
   });
-}
+};
 
 const Retry = exposeAsProperties(Object.create(null), {
   default: __withRetries__(__default__),
