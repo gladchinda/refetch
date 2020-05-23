@@ -1,7 +1,7 @@
-import Fetch from './src/fetch';
-import Retry from './src/retry';
-import { DEFAULT_TIMEOUT } from './src/support/constants';
-import { exposeAsProperties } from './src/support/helpers';
+import Fetch from './fetch';
+import Retry from './retry';
+import { DEFAULT_TIMEOUT } from './support/constants';
+import { exposeAsProperties } from './support/helpers';
 
 function refetch(config) {
   return new Fetch(config);
