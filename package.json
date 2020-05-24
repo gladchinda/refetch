@@ -2,11 +2,8 @@
   "name": "refetch",
   "version": "0.1.0",
   "description": "A wrapper around the native Fetch API with lots of awesomeness.",
-  "main": "dist/refetch.js",
   "source": "src/index.js",
-  "module": "dist/refetch.m.js",
-  "esmodule": "dist/refetch.modern.js",
-  "umd:main": "dist/refetch.umd.js",
+  "umd:main": "dist/refetch.js",
   "repository": "https://github.com/gladchinda/refetch.git",
   "author": "Glad Chinda <gladxeqs@gmail.com>",
   "license": "MIT",
@@ -24,12 +21,12 @@
     "src"
   ],
   "scripts": {
-    "build": "microbundle --strict --compress --name refetch",
-    "dev": "microbundle --watch --strict --compress --name refetch"
+    "build": "microbundle --strict",
+    "dev": "microbundle --watch --strict"
   },
   "devDependencies": {
     "husky": "^4.2.5",
-    "microbundle": "0.11",
+    "microbundle": "^0.11.0",
     "prettier": "2.0.5",
     "pretty-quick": "^2.0.1"
   }
