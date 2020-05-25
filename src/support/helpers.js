@@ -1,15 +1,3 @@
-// Number.isInteger polyfill
-// Source: MDN (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isInteger)
-Number.isInteger =
-  Number.isInteger ||
-  function (value) {
-    return (
-      typeof value === 'number' &&
-      isFinite(value) &&
-      Math.floor(value) === value
-    );
-  };
-
 function constant(value) {
   return function _constantFn() {
     return value;
@@ -24,10 +12,26 @@ function isObject(value) {
   return Object.prototype.toString.call(value) === '[object Object]';
 }
 
+function isInteger(value) {
+  /**
+   * Number.isInteger polyfill
+   * @source https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isInteger
+   */
+  return (isInteger =
+    Number.isInteger ||
+    function (value) {
+      return (
+        typeof value === 'number' &&
+        isFinite(value) &&
+        Math.floor(value) === value
+      );
+    })(value);
+}
+
 function getNumber(value, defaultNumber) {
-  return Number.isInteger((value = +value))
+  return isInteger((value = +value))
     ? value
-    : Number.isInteger(defaultNumber)
+    : isInteger(defaultNumber)
     ? defaultNumber
     : Infinity;
 }
@@ -56,12 +60,13 @@ function exposeAsProperties(object, properties) {
   const enumerable = arguments[2] !== false;
   return Object.defineProperties(
     object,
-    Object.fromEntries(
-      Object.entries(properties).map(([prop, value]) => [
-        prop,
-        { enumerable, value }
-      ])
-    )
+    Object.keys(properties).reduce((descriptors, prop) => {
+      descriptors[prop] = {
+        enumerable,
+        value: properties[prop]
+      };
+      return descriptors;
+    }, {})
   );
 }
 
