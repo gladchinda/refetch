@@ -67,19 +67,31 @@ function Fetch(config) {
 
           const { signal } = $controller;
           const ABORT_ERROR = new DOMException('Aborted', 'AbortError');
-          const FETCH_OPTIONS = { ...(isObject(init) ? init : {}), signal };
+          const FETCH_OPTIONS = isObject(init) ? init : {};
+
+          const __withFetchData__ = (innerFn) => (data) => {
+            return (
+              isFunction(innerFn) &&
+              innerFn({
+                ...(isObject(data) ? data : {}),
+                fetch: { resource, options: FETCH_OPTIONS }
+              })
+            );
+          };
 
           const __fetch__ = () => {
             const __delay__ = delay($delay, () => {
               isFunction(__onRetry__) &&
                 $retries > 0 &&
-                __onRetry__({
-                  count: $retries,
-                  delay: $delay,
-                  max: __maxRetries__
+                __withFetchData__(__onRetry__)({
+                  retry: {
+                    current: $retries,
+                    delay: $delay,
+                    max: __maxRetries__
+                  }
                 });
 
-              return fetch(resource, FETCH_OPTIONS)
+              return fetch(resource, { ...FETCH_OPTIONS, signal })
                 .then((response) =>
                   response.ok ? response : Promise.reject(response)
                 )
@@ -122,7 +134,10 @@ function Fetch(config) {
                 if (typeof __timeout__ === 'number') {
                   __delay__ = delay(__timeout__, () => {
                     $abort();
-                    isFunction(__onTimeout__) && __onTimeout__();
+                    isFunction(__onTimeout__) &&
+                      __withFetchData__(__onTimeout__)({
+                        timeout: __timeout__
+                      });
                   });
                 }
 
@@ -140,7 +155,7 @@ function Fetch(config) {
               })
           ).catch((err) => {
             if (err.name === 'AbortError') {
-              isFunction(__onAbort__) && __onAbort__();
+              isFunction(__onAbort__) && __withFetchData__(__onAbort__)();
               return false;
             }
 
