@@ -20,7 +20,7 @@ function isObject(value) {
   // Plain JavaScript objects should report an object type of `Object` as long
   // as the toString resolution behavior has not been tampered with. So this
   // check is safe to a large extent, although not completely fool proof.
-  return {}.toString.call(value) === '[object Object]';
+  return Object.prototype.toString.call(value) === '[object Object]';
 }
 
 // Helper function that determines whether the value passed to it is an integer
