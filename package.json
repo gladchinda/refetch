@@ -2,8 +2,7 @@
   "name": "refetch",
   "version": "0.1.0",
   "description": "A wrapper around the native Fetch API with lots of awesomeness.",
-  "source": "src/index.js",
-  "umd:main": "dist/refetch.js",
+  "main": "src/index.js",
   "repository": "https://github.com/gladchinda/refetch.git",
   "author": "Glad Chinda <gladxeqs@gmail.com>",
   "license": "MIT",
@@ -21,13 +20,19 @@
     "src"
   ],
   "scripts": {
-    "build": "microbundle --strict",
-    "dev": "microbundle --watch --strict"
+    "build": "rollup --config"
   },
   "devDependencies": {
+    "@babel/core": "^7.10.0",
+    "@babel/plugin-transform-runtime": "^7.10.0",
+    "@babel/preset-env": "^7.10.0",
+    "@rollup/plugin-babel": "^5.0.2",
+    "babel-preset-minify": "^0.5.1",
     "husky": "^4.2.5",
-    "microbundle": "^0.11.0",
     "prettier": "2.0.5",
-    "pretty-quick": "^2.0.1"
+    "pretty-quick": "^2.0.1",
+    "rollup": "^2.10.9",
+    "rollup-plugin-filesize": "~6.0.1",
+    "rollup-plugin-terser": "^6.1.0"
   }
 }
