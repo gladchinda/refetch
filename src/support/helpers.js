@@ -2,7 +2,7 @@
 // returns an inner function that will always return that retained value,
 // regardless of what arguments it is called with.
 function constant(value) {
-  return function _constantFn() {
+  return function _constant() {
     return value;
   };
 }
@@ -126,48 +126,68 @@ function exposeAsProperties(object, properties, enumerable = true) {
 // resolves. Since this function uses setTimeout for the delay, the callback is
 // only executed if the timeout is still active (not yet cleared).
 //
-// The returned promise has an additional .end() method defined on it that can
+// The returned promise has an additional .clear() method defined on it that can
 // be used to clear the timeout even before the delay elapses. This method also
-// returns a promise and can take a callback argument, that will be executed
-// when the returned promise resolves.
+// returns the promise and can take a callback argument, that will be executed
+// when the delayed promise is aborted.
 function delay(ms, callback) {
   let timeout = 0;
+  let clearCallback;
 
-  const promise = new Promise((resolve) => {
-    // setTimeout is used to setup the delay.
-    // Hence, a mechanism should be provided to clear timeout as needed.
-    timeout = setTimeout(
-      () => {
-        resolve(
-          // Create an immediately resolved promise and executes the passed
-          // callback in its fulfillment handler as long as the timeout is
-          // still active. Finally, the outer promise resolves with the
-          // resulting promise.
-          Promise.resolve().then(() => {
-            if (timeout && isFunction(callback)) {
-              return callback();
-            }
-          })
-        );
-      },
+  // Setup abort controller and signal for aborting the delayed promise.
+  const controller = new AbortController();
+  const abort = controller.abort.bind(controller);
+  const { signal } = controller;
 
-      // If ms cannot be resolved to a number, use 1000 milliseconds as timeout
-      // delay instead.
-      isNaN((ms = +ms)) || ms < 0 ? 1000 : ms
-    );
-  });
+  const promise = (signal.aborted
+    ? // If the abort signal is already in an aborted state, create an already
+      // rejected promise, after clearing the delay timeout.
+      clear(Promise.reject)
+    : new Promise((resolve, reject) => {
+        // If ms cannot be resolved to a number, use 1000 milliseconds as delay.
+        timeout = setTimeout(resolve, isNaN((ms = +ms)) || ms < 0 ? 1000 : ms);
 
-  // Expose a `.end` method (for clearing timeout) on the promise, before
-  // returning the promise.
-  return exposeAsProperties(promise, {
-    // This .end() method ensures the timeout set by the delay is cleared and
-    // reset. It can take a callback that will be executed as the fulfillment
-    // handler of an already resolved promise before returning the promise.
-    end: function (callback) {
-      clearTimeout(timeout) && (timeout = 0);
-      return Promise.resolve().then(callback);
-    }
-  });
+        // Listen for abort event on the abort signal and reject the promise,
+        // after clearing the delay timeout.
+        signal.addEventListener('abort', () => clear(reject));
+      })
+  )
+    // Create a new promise using the .then() method that resolves to a boolean
+    // value, and determine what callback should be triggered based on that
+    // value.
+    .then(constant(true), constant(false))
+    .then((status) => {
+      const fn = status ? callback : clearCallback;
+      return isFunction(fn) ? fn() : fn;
+    });
+
+  // Expose a non-enumerable and non-configurable `.clear()` method,
+  // for clearing/aborting the delay, before returning the promise.
+  return exposeAsProperties(
+    promise,
+    {
+      // This .clear() method can take a callback that will be executed when the
+      // delay is aborted, before returning the promise.
+      clear: function (callback) {
+        clearCallback = callback;
+        abort();
+        return this;
+      }
+    },
+    false
+  );
+
+  // This `clear()` function clears and resets the delay timeout only on the
+  // first call, after which it then triggers the callback passed to it. For
+  // subsequent calls, it only triggers the callback.
+  function clear(callback) {
+    timeout && clearTimeout(timeout);
+    timeout = 0;
+
+    return (clear = function clear(callback) {
+      isFunction(callback) && callback();
+    })(callback);
+  }
 }
 
 export {
