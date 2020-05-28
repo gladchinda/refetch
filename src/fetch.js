@@ -114,7 +114,7 @@ function Fetch(config) {
             // The AbortError is also returned in an already rejected promise.
             const __aborted__ = new Promise((resolve, reject) => {
               signal.addEventListener('abort', () => {
-                __delay__.end(() => reject(ABORT_ERROR));
+                __delay__.clear(() => reject(ABORT_ERROR));
               });
             });
 
@@ -147,8 +147,8 @@ function Fetch(config) {
                     // is cleared when any of the above promises fulfills.
                     // Also, automatically reject the promise with the error.
                     return typeof __delay__ !== 'undefined' &&
-                      isFunction(__delay__.end)
-                      ? __delay__.end(() => Promise.reject(err))
+                      isFunction(__delay__.clear)
+                      ? __delay__.clear(() => Promise.reject(err))
                       : Promise.reject(err);
                   })
                   .then(resolve, reject);
