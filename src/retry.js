@@ -12,6 +12,7 @@ const __immediately__ = constant(0);
 // value computed based on the Fibonacci sequence. The returned value is maxes
 // out at 1000.
 const __fibonacci__ = function (retry) {
+  retry = Math.min(retry, DEFAULT_MAX_RETRIES) || 0;
   return Math.min(fibonacci(retry) * retry, 1000);
 };
 
@@ -19,6 +20,7 @@ const __fibonacci__ = function (retry) {
 // values computed based on powers of 2, for every four consecutive retry count.
 // The returned value is maxes out at 500.
 const __progressive__ = function (retry) {
+  retry = Math.min(retry, DEFAULT_MAX_RETRIES) || 0;
   return Math.min(Math.pow(2, retry >> 2), 5) * 100;
 };
 
