@@ -190,10 +190,24 @@ function delay(ms, callback) {
   }
 }
 
+// Returns a new AbortError DOM exception. If DOMException is not supported or
+// fails for any reason, it returns an Error object with the same properties
+// instead.
+function getAbortError() {
+  try {
+    return new DOMException('Aborted', 'AbortError');
+  } catch (e) {
+    const err = new Error('Aborted');
+    err.name = 'AbortError';
+    return err;
+  }
+}
+
 export {
   constant,
   delay,
   exposeAsProperties,
+  getAbortError,
   getBoundedNumber,
   getNumber,
   isFunction,

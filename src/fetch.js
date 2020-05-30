@@ -2,6 +2,7 @@ import Retry from './retry';
 import {
   delay,
   exposeAsProperties,
+  getAbortError,
   getBoundedNumber,
   getNumber,
   isFunction,
@@ -66,7 +67,7 @@ function Fetch(config) {
           $controller = new AbortController();
 
           const { signal } = $controller;
-          const ABORT_ERROR = new DOMException('Aborted', 'AbortError');
+          const ABORT_ERROR = getAbortError();
           const FETCH_OPTIONS = isObject(init) ? init : {};
 
           const __withFetchData__ = (innerFn) => (data) => {
