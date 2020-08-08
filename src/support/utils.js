@@ -59,6 +59,18 @@ function isPlainObject(value) {
 }
 
 /**
+ * Checks if the given value is a plain JavaScript object without any
+ * own properties. It relies on the `isPlainObject()` helper.
+ *
+ * @param {*} value The value to check.
+ * @return {boolean} True if `value` is an empty plain JS object, false otherwise.
+ * @see isPlainObject
+ */
+function isEmptyObject(value) {
+  return isPlainObject(value) && Object.getOwnPropertyNames(value).length === 0;
+}
+
+/**
  * Checks if the given value is a `Response` object.
  *
  * @param {*} value The value to check.
@@ -103,6 +115,7 @@ function isAborted(signal) {
 export {
   constant,
   isAborted,
+  isEmptyObject,
   isFunction,
   isPlainObject,
   isPromise,
