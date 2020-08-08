@@ -105,4 +105,4 @@ function initHeadersResolver(headers) {
     : noop;
 }
 
-export { initHeadersResolver, initOptionsResolver };
+export { initHeadersResolver, initOptionResolver };
