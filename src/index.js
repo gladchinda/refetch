@@ -1,5 +1,4 @@
-import refetch from './refetch';
-import { TIMEOUT_ERROR } from './support/error';
+import Refetch from './refetch';
 
 Object.defineProperties(
   refetch,
@@ -7,7 +6,7 @@ Object.defineProperties(
     function (descriptors, property) {
       descriptors[property] = {
         get() {
-          return refetch()[property];
+          return Refetch()[property];
         }
       };
 
@@ -17,12 +16,4 @@ Object.defineProperties(
   )
 );
 
-Object.defineProperties(refetch, {
-  retryAfterTimeout: {
-    value: function (responseOrError) {
-      return responseOrError === TIMEOUT_ERROR;
-    }
-  }
-});
-
-export default refetch;
+export default Refetch;

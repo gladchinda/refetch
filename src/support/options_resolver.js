@@ -17,7 +17,7 @@ import { FETCH_INIT_OPTIONS } from './constants';
  *
  * @param {*} option The fetch initialization option.
  * @param {*} defaultValue The default value for the specified `option`.
- * @returns {Function} The resolver function for the specified `option`.
+ * @returns {function} The resolver function for the specified `option`.
  * @see FETCH_INIT_OPTIONS
  */
 function initOptionsResolver(option, defaultValue) {
@@ -58,7 +58,7 @@ function initOptionsResolver(option, defaultValue) {
  *
  * @param {*} headers The supposed headers passed as a plain object literal
  *                    or an a `Headers` object.
- * @returns {Function} The resolver function for the `"headers"` option.
+ * @returns {function} The resolver function for the `"headers"` option.
  */
 function initHeadersResolver(headers) {
   // If `headers` is a non-empty plain object, make a new `Headers` object

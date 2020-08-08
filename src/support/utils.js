@@ -112,6 +112,42 @@ function isAborted(signal) {
   return isSignal(signal) && signal.aborted;
 }
 
+/**
+ * Helper function for defining multiple non-configurable data properties
+ * on an object from a `properties` object of property-value pairs. This
+ * function leverages `Object.defineProperties()`, hence it might throw
+ * errors when trying to redefine non-configurable properties that have
+ * been previously defined on the target object.
+ *
+ * The second argument can be used to specify the enumerable behavior of
+ * all the defined properties.
+ *
+ * @param {object} properties An object of property-value pairs.
+ * @param {boolean} enumerable A boolean for the enumerable behavior of the properties.
+ * @returns {object} The target object with the defined properties.
+ */
+function withProperties(properties, enumerable = true) {
+  // This ensures that enumerable is `false` only when it is explicitly
+  // passed as `false`, otherwise it is `true`.
+  enumerable = enumerable !== false;
+
+  // Return the target object (now having the defined properties).
+  return Object.defineProperties(
+    this,
+
+    // `Object.keys()` together with `Array.prototype.reduce` is used here
+    // instead of `Object.fromEntries()` or `Object.entries()` to eliminate
+    // the need of polyfills for this to run in ES5 targets.
+    Object.keys(properties).reduce((descriptors, prop) => {
+      descriptors[prop] = {
+        enumerable,
+        value: properties[prop]
+      };
+      return descriptors;
+    }, Object.create(null))
+  );
+}
+
 export {
   constant,
   isAborted,
@@ -121,5 +157,6 @@ export {
   isPromise,
   isResponse,
   isSignal,
-  noop
+  noop,
+  withProperties
 };

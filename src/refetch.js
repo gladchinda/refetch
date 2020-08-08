@@ -1,5 +1,5 @@
-function refetch() {
+function Refetch() {
   // The `refetch` implementation goes here.
 }
 
-export default refetch;
+export default Refetch;
