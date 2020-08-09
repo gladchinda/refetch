@@ -164,48 +164,62 @@ function Refetch() {
     }
 
     function shouldAttemptRetry(responseOrError) {
-      function* __shouldAttemptRetry__(responseOrError) {
-        let retry = yield false;
-
-        for (let predicate of retryPredicates) {
-          retry = yield Resolve(
+      return Promise.all(
+        retryPredicates.map((predicate) => {
+          return Resolve(
             predicate(
               isResponse(responseOrError)
                 ? responseOrError.clone()
                 : responseOrError
             )
           ).then(Boolean, () => false);
-
-          if (retry === true) return;
-        }
-      }
-
-      function synchronize(fn) {
-        function next(iterator, callback, prev = undefined) {
-          const item = iterator.next(prev);
-          const value = item.value;
-
-          if (item.done) return callback(prev);
-
-          if (isPromise(value)) {
-            value.then((value) =>
-              setTimeout(() => next(iterator, callback, value))
-            );
-          } else {
-            setTimeout(() => next(iterator, callback, value));
-          }
-        }
-
-        return (synchronize = function synchronize(fn) {
-          return (...args) =>
-            new Promise((resolve) => next(fn(...args), resolve));
-        })(fn);
-      }
-
-      return (shouldAttemptRetry = synchronize(__shouldAttemptRetry__))(
-        responseOrError
-      );
+        })
+      ).then((retryTests) => retryTests.reduce((a, b) => a || b, false));
     }
+
+    // function shouldAttemptRetry(responseOrError) {
+    //   function* __shouldAttemptRetry__(responseOrError) {
+    //     let retry = yield false;
+
+    //     for (let predicate of retryPredicates) {
+    //       retry = yield Resolve(
+    //         predicate(
+    //           isResponse(responseOrError)
+    //             ? responseOrError.clone()
+    //             : responseOrError
+    //         )
+    //       ).then(Boolean, () => false);
+
+    //       if (retry === true) return;
+    //     }
+    //   }
+
+    //   function synchronize(fn) {
+    //     function next(iterator, callback, prev = undefined) {
+    //       const item = iterator.next(prev);
+    //       const value = item.value;
+
+    //       if (item.done) return callback(prev);
+
+    //       if (isPromise(value)) {
+    //         value.then((value) =>
+    //           setTimeout(() => next(iterator, callback, value))
+    //         );
+    //       } else {
+    //         setTimeout(() => next(iterator, callback, value));
+    //       }
+    //     }
+
+    //     return (synchronize = function synchronize(fn) {
+    //       return (...args) =>
+    //         new Promise((resolve) => next(fn(...args), resolve));
+    //     })(fn);
+    //   }
+
+    //   return (shouldAttemptRetry = synchronize(__shouldAttemptRetry__))(
+    //     responseOrError
+    //   );
+    // }
 
     function createRetryHandler(retryFn, abortPromises) {
       retryFn = isFunction(retryFn) ? retryFn : noop;
