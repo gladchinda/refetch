@@ -30,15 +30,6 @@ import {
 } from './support/constants';
 
 function Refetch() {
-  let limit = 1;
-  let timeout = 0;
-  let multiple = true;
-  let initResolvers = [];
-  let retryPredicates = [];
-  let retryDelaySequence = DefaultDelaySequence;
-
-  let $fetch = createFetch();
-
   const CHAINED_MODIFIER_PROPERTIES = {
     delay: {
       value: function (delayOrSequence) {
@@ -146,6 +137,15 @@ function Refetch() {
       }
     }
   };
+
+  let limit = 1;
+  let timeout = 0;
+  let multiple = true;
+  let initResolvers = [];
+  let retryPredicates = [];
+  let retryDelaySequence = DefaultDelaySequence;
+
+  let $fetch = createFetch();
 
   return $fetch;
 

@@ -1,7 +1,7 @@
 import Refetch from './refetch';
 
 Object.defineProperties(
-  refetch,
+  Refetch,
   ['delay', 'init', 'limit', 'many', 'one', 'retry', 'timeout'].reduce(
     function (descriptors, property) {
       descriptors[property] = {
@@ -15,5 +15,10 @@ Object.defineProperties(
     {}
   )
 );
+
+// Object.defineProperty(window, 'Refetch', {
+//   value: Refetch,
+//   enumerable: true
+// });
 
 export default Refetch;

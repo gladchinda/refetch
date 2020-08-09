@@ -20,7 +20,7 @@ import { FETCH_INIT_OPTIONS } from './constants';
  * @returns {function} The resolver function for the specified `option`.
  * @see FETCH_INIT_OPTIONS
  */
-function initOptionsResolver(option, defaultValue) {
+function initOptionResolver(option, defaultValue) {
   // Check if the specified `option` is one of the allowed fetch options,
   // and that its value is not `"headers"`.
   const isAllowedFetchOption =
@@ -74,11 +74,8 @@ function initHeadersResolver(headers) {
         if (isPlainObject(init)) {
           let $headers = init['headers'];
 
-          // If `$headers` is a non-empty plain object, make a new `Headers`
-          // object out of it.
-          if (isPlainObject($headers) && !isEmptyObject($headers)) {
-            $headers = new Headers($headers);
-          }
+          // Make a new `Headers` object out of the init `$headers`.
+          $headers = new Headers(isPlainObject($headers) ? $headers : {});
 
           if ($headers instanceof Headers) {
             // For every header in the `headers` object that isn't already

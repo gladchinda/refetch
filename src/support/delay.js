@@ -1,4 +1,4 @@
-import { Reject } from './promises';
+import { Reject } from './promise';
 import { TIMEOUT_ERROR } from './error';
 import { createAbortController } from './abort';
 import { constant, isAborted, isFunction } from './utils';
@@ -14,7 +14,7 @@ import {
  * value of the optimal retry count in a delay sequence
  * function.
  */
-const OPTIMAL_RETRY_KEY = '___REFETCH$$OPTIMAL$$RETRY___';
+const OPTIMAL_RETRY_KEY = 'RF—OPTRY';
 
 /**
  * Delay sequence function that always returns the value stored
