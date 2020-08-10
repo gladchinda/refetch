@@ -14,7 +14,7 @@ import {
  * value of the optimal retry count in a delay sequence
  * function.
  */
-const OPTIMAL_RETRY_KEY = 'RF—OPTRY';
+const OPTIMAL_RETRY_KEY = 'RF-OPTRY';
 
 /**
  * Delay sequence function that always returns the value stored
