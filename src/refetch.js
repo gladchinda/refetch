@@ -3,6 +3,11 @@ import { Resolve, Reject, PENDING_PROMISE } from './support/promise';
 import { createAbortPromise, createAbortController } from './support/abort';
 
 import {
+  initHeadersResolver,
+  initOptionResolver
+} from './support/init_options';
+
+import {
   DefaultDelaySequence,
   parseRetryDelay,
   createAbortableDelay
@@ -19,16 +24,24 @@ import {
 } from './support/utils';
 
 import {
-  initHeadersResolver,
-  initOptionResolver
-} from './support/init_options';
-
-import {
   FETCH_INIT_OPTIONS,
   REFETCH_DEFAULT_DELAY,
   REFETCH_MINIMUM_TIMEOUT,
   REFETCH_MAXIMUM_TIMEOUT
 } from './support/constants';
+
+const CHAINED_MODIFIER_PROPERTIES = Object.freeze(
+  ['delay', 'init', 'limit', 'many', 'one', 'retry', 'timeout'].reduce(
+    (props, prop) => {
+      props[prop] = __modifierPropertyHelper__(
+        prop,
+        ['many', 'one'].indexOf(prop) >= 0
+      );
+      return props;
+    },
+    {}
+  )
+);
 
 const __FetchContextProto__ = Object.freeze(
   withProperties.call(Object.create(null), {
@@ -152,228 +165,192 @@ function __createFetchContextObject__() {
   );
 }
 
-function Refetch() {
-  const CHAINED_MODIFIER_PROPERTIES = {
-    delay: {
-      value: function (delayOrSequence) {
-        const $context = this.$context.$$clone().$delay(delayOrSequence);
-        return createFetch.call($context);
-      }
-    },
+function __modifierPropertyHelper__(prop, isGetter = false) {
+  prop = `$${prop}`;
 
-    init: {
-      value: function (initDefaults) {
-        const $context = this.$context.$$clone().$init(initDefaults);
-        return createFetch.call($context);
-      }
-    },
+  return {
+    [isGetter === true ? 'get' : 'value']: function (...args) {
+      try {
+        if (isFunction(Object.getPrototypeOf(this.$context)[prop])) {
+          const $context = this.$context.$$clone()[prop](...args);
+          return createFetch.call($context);
+        }
+      } catch (e) {}
 
-    limit: {
-      value: function (count) {
-        const $context = this.$context.$$clone().$limit(count);
-        return createFetch.call($context);
-      }
-    },
-
-    many: {
-      get() {
-        const $context = this.$context.$$clone().$many();
-        return createFetch.call($context);
-      }
-    },
-
-    one: {
-      get() {
-        const $context = this.$context.$$clone().$one();
-        return createFetch.call($context);
-      }
-    },
-
-    retry: {
-      value: function (...predicates) {
-        const $context = this.$context.$$clone().$retry(...predicates);
-        return createFetch.call($context);
-      }
-    },
-
-    timeout: {
-      value: function (duration) {
-        const $context = this.$context.$$clone().$timeout(duration);
-        return createFetch.call($context);
-      }
+      return this;
     }
   };
-
-  return createFetch.call(__createFetchContextObject__());
-
-  function createFetch() {
-    let abort;
-    let abortSignal;
-
-    const $this = this;
-    const hasTimeout = $this.timeout > 0;
-    const singularRequest = $this.multiple !== true;
-
-    refreshAbortController();
-
-    function refreshAbortController() {
-      ({ abort, signal: abortSignal } = createAbortController());
-      abortSignal.addEventListener('abort', refreshAbortController);
-    }
-
-    function shouldAttemptRetry(responseOrError) {
-      return Promise.all(
-        $this.retryPredicates.map((predicate) => {
-          return Resolve(
-            predicate(
-              isResponse(responseOrError)
-                ? responseOrError.clone()
-                : responseOrError
-            )
-          ).then(Boolean, () => false);
-        })
-      ).then((retryTests) => retryTests.reduce((a, b) => a || b, false));
-    }
-
-    // function shouldAttemptRetry(responseOrError) {
-    //   function* __shouldAttemptRetry__(responseOrError) {
-    //     let retry = yield false;
-
-    //     for (let predicate of $this.retryPredicates) {
-    //       retry = yield Resolve(
-    //         predicate(
-    //           isResponse(responseOrError)
-    //             ? responseOrError.clone()
-    //             : responseOrError
-    //         )
-    //       ).then(Boolean, () => false);
-
-    //       if (retry === true) return;
-    //     }
-    //   }
-
-    //   function synchronize(fn) {
-    //     function next(iterator, callback, prev = undefined) {
-    //       const item = iterator.next(prev);
-    //       const value = item.value;
-
-    //       if (item.done) return callback(prev);
-
-    //       if (isPromise(value)) {
-    //         value.then((value) =>
-    //           setTimeout(() => next(iterator, callback, value))
-    //         );
-    //       } else {
-    //         setTimeout(() => next(iterator, callback, value));
-    //       }
-    //     }
-
-    //     return (synchronize = function synchronize(fn) {
-    //       return (...args) =>
-    //         new Promise((resolve) => next(fn(...args), resolve));
-    //     })(fn);
-    //   }
-
-    //   return (shouldAttemptRetry = synchronize(__shouldAttemptRetry__))(
-    //     responseOrError
-    //   );
-    // }
-
-    function createRetryHandler(retryFn, abortPromises) {
-      retryFn = isFunction(retryFn) ? retryFn : noop;
-      abortPromises = [].concat(abortPromises).filter(isPromise);
-
-      let retries = 0;
-
-      return function __retryHandler__(responseOrError) {
-        return shouldAttemptRetry(responseOrError).then((retry) =>
-          retry && ++retries < $this.limit && responseOrError !== ABORT_ERROR
-            ? new Promise((resolve, reject) => {
-                const $timeout = createAbortableDelay(
-                  parseRetryDelay($this.retryDelaySequence(retries)),
-                  retryFn
-                );
-
-                Promise.race([
-                  $timeout,
-                  createAbortPromise(abortSignal),
-                  ...abortPromises
-                ])
-                  .catch((err) => {
-                    err === ABORT_ERROR &&
-                      isFunction($timeout.clear) &&
-                      $timeout.clear();
-                    return Reject(err);
-                  })
-                  .then(resolve, reject);
-              })
-            : (isResponse(responseOrError) ? Resolve : Reject)(responseOrError)
-        );
-      };
-    }
-
-    function resolveInitOptions(init) {
-      init = isPlainObject(init) ? init : {};
-      $this.initResolvers.forEach((resolver) => resolver(init));
-      return init;
-    }
-
-    function __fetch__(...args) {
-      singularRequest && abort();
-
-      const [resource, init] = args;
-      const { signal: outerSignal, ...initOptions } = resolveInitOptions(init);
-      const outerAbortPromise = createAbortPromise(outerSignal);
-      const __retry__ = createRetryHandler(__refetch__, [outerAbortPromise]);
-
-      return __refetch__();
-
-      function __refetch__() {
-        if (isAborted(outerSignal)) {
-          return Reject(ABORT_ERROR);
-        }
-
-        if (isAborted(abortSignal)) {
-          refreshAbortController();
-        }
-
-        const $inner = createAbortController();
-        const $timeout = hasTimeout
-          ? createAbortableDelay($this.timeout)
-          : PENDING_PROMISE;
-
-        const $fetch = Promise.race([
-          $timeout,
-          createAbortPromise(abortSignal),
-          outerAbortPromise,
-          fetch(resource, { ...initOptions, signal: $inner.signal })
-        ])
-          .catch((err) => {
-            (err === ABORT_ERROR || err === TIMEOUT_ERROR) && $inner.abort();
-            return Reject(err);
-          })
-          .finally(() => {
-            hasTimeout && isFunction($timeout.clear) && $timeout.clear();
-          });
-
-        return $fetch.then(__retry__, __retry__);
-      }
-    }
-
-    Object.defineProperties(
-      Object.defineProperty(__fetch__, 'abort', {
-        enumerable: true,
-        get() {
-          return abort;
-        }
-      }),
-      CHAINED_MODIFIER_PROPERTIES
-    );
-
-    return Object.defineProperty(__fetch__, '$context', {
-      value: Object.freeze($this)
-    });
-  }
 }
 
-export default Refetch;
+function createFetch() {
+  let abort;
+  let abortSignal;
+
+  const $this = this;
+  const hasTimeout = $this.timeout > 0;
+  const singularRequest = $this.multiple !== true;
+
+  refreshAbortController();
+
+  function refreshAbortController() {
+    ({ abort, signal: abortSignal } = createAbortController());
+    abortSignal.addEventListener('abort', refreshAbortController);
+  }
+
+  function shouldAttemptRetry(responseOrError) {
+    return Promise.all(
+      $this.retryPredicates.map((predicate) => {
+        return Resolve(
+          predicate(
+            isResponse(responseOrError)
+              ? responseOrError.clone()
+              : responseOrError
+          )
+        ).then(Boolean, () => false);
+      })
+    ).then((retryTests) => retryTests.reduce((a, b) => a || b, false));
+  }
+
+  // function shouldAttemptRetry(responseOrError) {
+  //   function* __shouldAttemptRetry__(responseOrError) {
+  //     let retry = yield false;
+
+  //     for (let predicate of $this.retryPredicates) {
+  //       retry = yield Resolve(
+  //         predicate(
+  //           isResponse(responseOrError)
+  //             ? responseOrError.clone()
+  //             : responseOrError
+  //         )
+  //       ).then(Boolean, () => false);
+
+  //       if (retry === true) return;
+  //     }
+  //   }
+
+  //   function synchronize(fn) {
+  //     function next(iterator, callback, prev = undefined) {
+  //       const item = iterator.next(prev);
+  //       const value = item.value;
+
+  //       if (item.done) return callback(prev);
+
+  //       if (isPromise(value)) {
+  //         value.then((value) =>
+  //           setTimeout(() => next(iterator, callback, value))
+  //         );
+  //       } else {
+  //         setTimeout(() => next(iterator, callback, value));
+  //       }
+  //     }
+
+  //     return (synchronize = function synchronize(fn) {
+  //       return (...args) =>
+  //         new Promise((resolve) => next(fn(...args), resolve));
+  //     })(fn);
+  //   }
+
+  //   return (shouldAttemptRetry = synchronize(__shouldAttemptRetry__))(
+  //     responseOrError
+  //   );
+  // }
+
+  function createRetryHandler(retryFn, abortPromises) {
+    retryFn = isFunction(retryFn) ? retryFn : noop;
+    abortPromises = [].concat(abortPromises).filter(isPromise);
+
+    let retries = 0;
+
+    return function __retryHandler__(responseOrError) {
+      return shouldAttemptRetry(responseOrError).then((retry) =>
+        retry && ++retries < $this.limit && responseOrError !== ABORT_ERROR
+          ? new Promise((resolve, reject) => {
+              const $timeout = createAbortableDelay(
+                parseRetryDelay($this.retryDelaySequence(retries)),
+                retryFn
+              );
+
+              Promise.race([
+                $timeout,
+                createAbortPromise(abortSignal),
+                ...abortPromises
+              ])
+                .catch((err) => {
+                  err === ABORT_ERROR &&
+                    isFunction($timeout.clear) &&
+                    $timeout.clear();
+                  return Reject(err);
+                })
+                .then(resolve, reject);
+            })
+          : (isResponse(responseOrError) ? Resolve : Reject)(responseOrError)
+      );
+    };
+  }
+
+  function resolveInitOptions(init) {
+    init = isPlainObject(init) ? init : {};
+    $this.initResolvers.forEach((resolver) => resolver(init));
+    return init;
+  }
+
+  function __fetch__(...args) {
+    singularRequest && abort();
+
+    const [resource, init] = args;
+    const { signal: outerSignal, ...initOptions } = resolveInitOptions(init);
+    const outerAbortPromise = createAbortPromise(outerSignal);
+    const __retry__ = createRetryHandler(__refetch__, [outerAbortPromise]);
+
+    return __refetch__();
+
+    function __refetch__() {
+      if (isAborted(outerSignal)) {
+        return Reject(ABORT_ERROR);
+      }
+
+      if (isAborted(abortSignal)) {
+        refreshAbortController();
+      }
+
+      const $inner = createAbortController();
+      const $timeout = hasTimeout
+        ? createAbortableDelay($this.timeout)
+        : PENDING_PROMISE;
+
+      const $fetch = Promise.race([
+        $timeout,
+        createAbortPromise(abortSignal),
+        outerAbortPromise,
+        fetch(resource, { ...initOptions, signal: $inner.signal })
+      ])
+        .catch((err) => {
+          (err === ABORT_ERROR || err === TIMEOUT_ERROR) && $inner.abort();
+          return Reject(err);
+        })
+        .finally(() => {
+          hasTimeout && isFunction($timeout.clear) && $timeout.clear();
+        });
+
+      return $fetch.then(__retry__, __retry__);
+    }
+  }
+
+  Object.defineProperties(
+    Object.defineProperty(__fetch__, 'abort', {
+      enumerable: true,
+      get() {
+        return abort;
+      }
+    }),
+    CHAINED_MODIFIER_PROPERTIES
+  );
+
+  return Object.defineProperty(__fetch__, '$context', {
+    value: Object.freeze($this)
+  });
+}
+
+export default function Refetch() {
+  return createFetch.call(__createFetchContextObject__());
+}
