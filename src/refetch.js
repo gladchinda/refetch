@@ -14,7 +14,8 @@ import {
   isResponse,
   isPromise,
   isFunction,
-  isPlainObject
+  isPlainObject,
+  withProperties
 } from './support/utils';
 
 import {
@@ -29,132 +30,189 @@ import {
   REFETCH_MAXIMUM_TIMEOUT
 } from './support/constants';
 
+const __FetchContextProto__ = Object.freeze(
+  withProperties.call(Object.create(null), {
+    $delay(delayOrSequence) {
+      if (!isFunction(delayOrSequence)) {
+        switch ((delayOrSequence = parseRetryDelay(delayOrSequence))) {
+          case REFETCH_DEFAULT_DELAY: {
+            delayOrSequence = DefaultDelaySequence;
+            break;
+          }
+
+          default: {
+            delayOrSequence = constant(delayOrSequence);
+          }
+        }
+      }
+
+      isFunction(delayOrSequence) &&
+        delayOrSequence !== this.retryDelaySequence &&
+        (this.retryDelaySequence = delayOrSequence);
+
+      return this;
+    },
+
+    $init(initDefaults) {
+      const { headers, ...defaults } = isPlainObject(initDefaults)
+        ? initDefaults
+        : {};
+
+      const resolvers = Object.keys(defaults).reduce((resolvers, option) => {
+        if (FETCH_INIT_OPTIONS.indexOf(option) >= 0) {
+          const defaultValue = defaults[option];
+
+          if (typeof defaultValue !== 'undefined') {
+            resolvers.push(initOptionResolver(option, defaultValue));
+          }
+        }
+
+        return resolvers;
+      }, []);
+
+      if (typeof headers !== 'undefined') {
+        resolvers.push(initHeadersResolver(headers));
+      }
+
+      this.initResolvers = resolvers;
+      return this;
+    },
+
+    $limit(count) {
+      count = (count = +count) === 0 ? 0 : Math.max(0, count);
+
+      Number.isInteger(count) &&
+        this.limit !== (count = count === 0 ? Infinity : count) &&
+        (this.limit = count);
+
+      return this;
+    },
+
+    $many() {
+      this.multiple === false && (this.multiple = true);
+      return this;
+    },
+
+    $one() {
+      this.multiple === true && (this.multiple = false);
+      return this;
+    },
+
+    $retry(...predicates) {
+      predicates = predicates.filter(isFunction);
+      const count = predicates.length;
+
+      (count || (count === 0 && count !== this.retryPredicates.length)) &&
+        (this.retryPredicates = predicates);
+
+      return this;
+    },
+
+    $timeout(duration) {
+      duration =
+        (duration = +duration) === 0
+          ? 0
+          : Math.max(
+              REFETCH_MINIMUM_TIMEOUT,
+              Math.min(duration, REFETCH_MAXIMUM_TIMEOUT)
+            );
+
+      Number.isFinite(duration) &&
+        this.timeout !== duration &&
+        (this.timeout = duration);
+
+      return this;
+    },
+
+    $$clone() {
+      return __createFetchContextObject__.call(this);
+    }
+  })
+);
+
+function __createFetchContextObject__() {
+  const $this = this;
+  const clone =
+    isPlainObject($this) &&
+    Object.getPrototypeOf($this) === __FetchContextProto__;
+
+  return withProperties.call(
+    Object.create(__FetchContextProto__),
+    {
+      limit: clone ? $this.limit : 1,
+      timeout: clone ? $this.timeout : 0,
+      multiple: clone ? $this.multiple : true,
+      initResolvers: [...(clone ? $this.initResolvers : [])],
+      retryPredicates: [...(clone ? $this.retryPredicates : [])],
+      retryDelaySequence: clone
+        ? $this.retryDelaySequence
+        : DefaultDelaySequence
+    },
+    true
+  );
+}
+
 function Refetch() {
   const CHAINED_MODIFIER_PROPERTIES = {
     delay: {
       value: function (delayOrSequence) {
-        if (!isFunction(delayOrSequence)) {
-          switch ((delayOrSequence = parseRetryDelay(delayOrSequence))) {
-            case REFETCH_DEFAULT_DELAY: {
-              delayOrSequence = DefaultDelaySequence;
-              break;
-            }
-
-            default: {
-              delayOrSequence = constant(delayOrSequence);
-            }
-          }
-        }
-
-        isFunction(delayOrSequence) &&
-          delayOrSequence !== retryDelaySequence &&
-          ((retryDelaySequence = delayOrSequence), ($fetch = createFetch()));
-
-        return $fetch;
+        const $context = this.$context.$$clone().$delay(delayOrSequence);
+        return createFetch.call($context);
       }
     },
 
     init: {
       value: function (initDefaults) {
-        const { headers, ...defaults } = isPlainObject(initDefaults)
-          ? initDefaults
-          : {};
-
-        const resolvers = Object.keys(defaults).reduce((resolvers, option) => {
-          if (FETCH_INIT_OPTIONS.indexOf(option) >= 0) {
-            const defaultValue = defaults[option];
-
-            if (typeof defaultValue !== 'undefined') {
-              resolvers.push(initOptionResolver(option, defaultValue));
-            }
-          }
-
-          return resolvers;
-        }, []);
-
-        if (typeof headers !== 'undefined') {
-          resolvers.push(initHeadersResolver(headers));
-        }
-
-        initResolvers = resolvers;
-        return ($fetch = createFetch());
+        const $context = this.$context.$$clone().$init(initDefaults);
+        return createFetch.call($context);
       }
     },
 
     limit: {
       value: function (count) {
-        count = (count = +count) === 0 ? 0 : Math.max(0, count);
-
-        Number.isInteger(count) &&
-          limit !== (count = count === 0 ? Infinity : count) &&
-          ((limit = count), ($fetch = createFetch()));
-
-        return $fetch;
+        const $context = this.$context.$$clone().$limit(count);
+        return createFetch.call($context);
       }
     },
 
     many: {
       get() {
-        multiple === false && ((multiple = true), ($fetch = createFetch()));
-        return $fetch;
+        const $context = this.$context.$$clone().$many();
+        return createFetch.call($context);
       }
     },
 
     one: {
       get() {
-        multiple === true && ((multiple = false), ($fetch = createFetch()));
-        return $fetch;
+        const $context = this.$context.$$clone().$one();
+        return createFetch.call($context);
       }
     },
 
     retry: {
       value: function (...predicates) {
-        predicates = predicates.filter(isFunction);
-        const count = predicates.length;
-
-        (count || (count === 0 && count !== retryPredicates.length)) &&
-          ((retryPredicates = predicates), ($fetch = createFetch()));
-
-        return $fetch;
+        const $context = this.$context.$$clone().$retry(...predicates);
+        return createFetch.call($context);
       }
     },
 
     timeout: {
       value: function (duration) {
-        duration =
-          (duration = +duration) === 0
-            ? 0
-            : Math.max(
-                REFETCH_MINIMUM_TIMEOUT,
-                Math.min(duration, REFETCH_MAXIMUM_TIMEOUT)
-              );
-
-        Number.isFinite(duration) &&
-          timeout !== duration &&
-          ((timeout = duration), ($fetch = createFetch()));
-
-        return $fetch;
+        const $context = this.$context.$$clone().$timeout(duration);
+        return createFetch.call($context);
       }
     }
   };
 
-  let limit = 1;
-  let timeout = 0;
-  let multiple = true;
-  let initResolvers = [];
-  let retryPredicates = [];
-  let retryDelaySequence = DefaultDelaySequence;
-
-  let $fetch = createFetch();
-
-  return $fetch;
+  return createFetch.call(__createFetchContextObject__());
 
   function createFetch() {
     let abort;
     let abortSignal;
 
-    const hasTimeout = timeout > 0;
-    const singularRequest = multiple !== true;
+    const $this = this;
+    const hasTimeout = $this.timeout > 0;
+    const singularRequest = $this.multiple !== true;
 
     refreshAbortController();
 
@@ -165,7 +223,7 @@ function Refetch() {
 
     function shouldAttemptRetry(responseOrError) {
       return Promise.all(
-        retryPredicates.map((predicate) => {
+        $this.retryPredicates.map((predicate) => {
           return Resolve(
             predicate(
               isResponse(responseOrError)
@@ -181,7 +239,7 @@ function Refetch() {
     //   function* __shouldAttemptRetry__(responseOrError) {
     //     let retry = yield false;
 
-    //     for (let predicate of retryPredicates) {
+    //     for (let predicate of $this.retryPredicates) {
     //       retry = yield Resolve(
     //         predicate(
     //           isResponse(responseOrError)
@@ -229,10 +287,10 @@ function Refetch() {
 
       return function __retryHandler__(responseOrError) {
         return shouldAttemptRetry(responseOrError).then((retry) =>
-          retry && ++retries < limit && responseOrError !== ABORT_ERROR
+          retry && ++retries < $this.limit && responseOrError !== ABORT_ERROR
             ? new Promise((resolve, reject) => {
                 const $timeout = createAbortableDelay(
-                  parseRetryDelay(retryDelaySequence(retries)),
+                  parseRetryDelay($this.retryDelaySequence(retries)),
                   retryFn
                 );
 
@@ -256,7 +314,7 @@ function Refetch() {
 
     function resolveInitOptions(init) {
       init = isPlainObject(init) ? init : {};
-      initResolvers.forEach((resolver) => resolver(init));
+      $this.initResolvers.forEach((resolver) => resolver(init));
       return init;
     }
 
@@ -281,7 +339,7 @@ function Refetch() {
 
         const $inner = createAbortController();
         const $timeout = hasTimeout
-          ? createAbortableDelay(timeout)
+          ? createAbortableDelay($this.timeout)
           : PENDING_PROMISE;
 
         const $fetch = Promise.race([
@@ -302,7 +360,7 @@ function Refetch() {
       }
     }
 
-    return Object.defineProperties(
+    Object.defineProperties(
       Object.defineProperty(__fetch__, 'abort', {
         enumerable: true,
         get() {
@@ -311,6 +369,10 @@ function Refetch() {
       }),
       CHAINED_MODIFIER_PROPERTIES
     );
+
+    return Object.defineProperty(__fetch__, '$context', {
+      value: Object.freeze($this)
+    });
   }
 }
 

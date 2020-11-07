@@ -24,19 +24,15 @@ Object.defineProperties(
   )
 );
 
-withProperties.call(
-  Refetch,
-  {
-    ABORT_ERROR,
-    TIMEOUT_ERROR,
-    FibonacciDelay,
-    ProgressiveDelay,
-    RetryOnError: Retry.ErrorRetry,
-    RetryOnNetworkError: Retry.NetworkErrorRetry,
-    RetryOnTimeout: Retry.TimeoutRetry
-  },
-  false
-);
+withProperties.call(Refetch, {
+  ABORT_ERROR,
+  TIMEOUT_ERROR,
+  FibonacciDelay,
+  ProgressiveDelay,
+  RetryOnError: Retry.ErrorRetry,
+  RetryOnNetworkError: Retry.NetworkErrorRetry,
+  RetryOnTimeout: Retry.TimeoutRetry
+});
 
 // Object.defineProperty(window, 'Refetch', {
 //   value: Refetch,

@@ -119,17 +119,17 @@ function isAborted(signal) {
  * errors when trying to redefine non-configurable properties that have
  * been previously defined on the target object.
  *
- * The second argument can be used to specify the enumerable behavior of
+ * The second argument can be used to specify the writable behavior of
  * all the defined properties.
  *
  * @param {object} properties An object of property-value pairs.
- * @param {boolean} enumerable A boolean for the enumerable behavior of the properties.
+ * @param {boolean} writable A boolean for the writable behavior of the properties.
  * @returns {object} The target object with the defined properties.
  */
-function withProperties(properties, enumerable = true) {
-  // This ensures that enumerable is `false` only when it is explicitly
+function withProperties(properties, writable = false) {
+  // This ensures that writable is `false` only when it is explicitly
   // passed as `false`, otherwise it is `true`.
-  enumerable = enumerable !== false;
+  writable = writable === true;
 
   // Return the target object (now having the defined properties).
   return Object.defineProperties(
@@ -140,7 +140,7 @@ function withProperties(properties, enumerable = true) {
     // the need of polyfills for this to run in ES5 targets.
     Object.keys(properties).reduce((descriptors, prop) => {
       descriptors[prop] = {
-        enumerable,
+        writable,
         value: properties[prop]
       };
       return descriptors;
